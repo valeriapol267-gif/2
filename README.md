@@ -10,9 +10,29 @@
 сторонних зависимостей). Менеджеры пакетов и готовые библиотеки для
 получения зависимостей не используются.
 
-Состояние проекта: **этап 1 - минимальный прототип с конфигурацией**.
-Приложение принимает параметры из командной строки, проверяет их и выводит
-в формате «ключ: значение».
+Состояние проекта: **этап 2 - сбор данных**. Приложение скачивает
+`pom.xml` заданной версии пакета из Maven-репозитория по URL и выводит
+его прямые зависимости. Построение графа (этап 3), обратные зависимости
+(этап 4) и визуализация PlantUML (этап 5) пока не реализованы; опции
+`--max-depth`, `--output` и `--test-mode` проверяются, но пока не
+используются (тестовый режим сообщает, что появится на этапе 3).
+
+Как это работает (модуль `depviz/maven.py`):
+
+1. По координатам `groupId:artifactId:version` строится URL по стандартной
+   раскладке Maven:
+   `<repo>/<groupId с / вместо .>/<artifactId>/<version>/<artifactId>-<version>.pom`.
+2. Файл скачивается стандартным `urllib` (`depviz/http_client.py`) и
+   разбирается `xml.etree.ElementTree`.
+3. Учитывается наследование: скачиваются parent-pom (до 10 уровней),
+   объединяются свойства, `dependencyManagement` и зависимости.
+4. Подставляются свойства `${...}` (свои, из parent, `project.version`,
+   `project.groupId` и т. п.); недостающие версии и scope берутся из
+   `dependencyManagement`; scope по умолчанию - `compile`.
+
+Ограничения: профили (`<profiles>`), BOM-импорты (`scope=import`) и
+диапазоны версий (`[1.0,2.0)`) не разворачиваются; если версия не
+определена, выводится «версия не определена».
 
 ## 2. Описание настроек
 
@@ -43,7 +63,9 @@
   существовать, имя не может быть каталогом.
 - `--max-depth`: целое число в диапазоне 1-100.
 
-При ошибке сообщение выводится в stderr, код завершения - `2`.
+Коды завершения: `0` - успех, `1` - ошибка получения данных (пакет или
+версия не найдены, сеть недоступна, некорректный `pom.xml`), `2` - ошибка
+параметров. Сообщения об ошибках выводятся в stderr.
 
 ## 3. Запуск и тесты
 
@@ -64,31 +86,41 @@ python3 -m unittest discover -s tests -t . -v
 
 ## 4. Примеры
 
-```
-$ sh run.sh --package org.apache.commons:commons-lang3 --version 3.14.0
-package: org.apache.commons:commons-lang3
-repo: https://repo1.maven.org/maven2
-test-mode: false
-version: 3.14.0
-output: graph.png
-max-depth: 3
-```
-
-Тестовый режим:
+Прямые зависимости пакета (формат строки: `groupId:artifactId:версия
+(scope[, optional])`):
 
 ```
-$ sh run.sh --test-mode --package A --repo repo.txt
-package: A
-repo: repo.txt
-test-mode: true
-version: -
-output: graph.png
-max-depth: 3
+$ sh run.sh --package org.demo:app --version 1.0 --repo http://127.0.0.1:8000
+Прямые зависимости org.demo:app:1.0 (2):
+  org.demo:lib:2.1 (compile)
+  junit:junit:4.13.2 (test)
+```
+
+Пакет без зависимостей:
+
+```
+$ sh run.sh --package org.demo:lib --version 2.1 --repo http://127.0.0.1:8000
+У пакета org.demo:lib:2.1 нет прямых зависимостей.
+```
+
+Реальный репозиторий (Maven Central используется по умолчанию):
+
+```
+sh run.sh --package org.apache.httpcomponents:httpclient --version 4.5.14
 ```
 
 Обработка ошибок:
 
 ```
+$ sh run.sh --package org.demo:app --version 9.9 --repo http://127.0.0.1:8000
+Ошибка: файл не найден (HTTP 404):
+  http://127.0.0.1:8000/org/demo/app/9.9/app-9.9.pom.
+  Проверьте имя пакета, версию и адрес репозитория.
+
+$ sh run.sh --package org.demo:app --version 1.0 --repo http://127.0.0.1:1
+Ошибка: не удалось подключиться к
+  http://127.0.0.1:1/org/demo/app/1.0/app-1.0.pom: [Errno 111] Connection refused.
+
 $ sh run.sh --package commons-lang3 --version 1.0
 Ошибка параметров: имя пакета должно иметь вид groupId:artifactId: 'commons-lang3'.
 
@@ -100,13 +132,8 @@ $ sh run.sh --package a:b --version 1.0 --repo ftp://x
 
 $ sh run.sh --package a:b --version 1.0 --max-depth 0
 Ошибка параметров: максимальная глубина должна быть от 1 до 100: 0.
-
-$ sh run.sh --package a:b --version 1.0 --output graph.svg
-Ошибка параметров: имя файла изображения должно оканчиваться на .png: 'graph.svg'.
-
-$ sh run.sh --test-mode --package a --repo repo.txt
-Ошибка параметров: имя пакета в тестовом режиме должно состоять из больших латинских букв (A, B, ...): 'a'.
-
-$ sh run.sh --test-mode --package A --repo none.txt
-Ошибка параметров: файл тестового репозитория не найден: 'none.txt'.
 ```
+
+Локальный репозиторий для проверки без интернета: создать каталог с
+раскладкой Maven (`org/demo/app/1.0/app-1.0.pom`) и запустить в нём
+`python3 -m http.server 8000`.
