@@ -5,7 +5,7 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, NoReturn, Optional, Sequence, Tuple
+from typing import NoReturn, Optional, Sequence
 from urllib.parse import urlparse
 
 from depviz.errors import ConfigError
@@ -18,7 +18,6 @@ MIN_DEPTH = 1
 MAX_DEPTH_LIMIT = 100
 OUTPUT_EXTENSION = ".png"
 ALLOWED_SCHEMES = ("http", "https")
-EMPTY_VALUE = "-"
 MAVEN_NAME_RE = re.compile(r"[A-Za-z0-9_.\-]+:[A-Za-z0-9_.\-]+")
 TEST_NAME_RE = re.compile(r"[A-Z]+")
 VERSION_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.+\-]*")
@@ -36,16 +35,6 @@ class Config:
     output: str
     max_depth: int
 
-    def as_pairs(self) -> List[Tuple[str, str]]:
-        """Вернуть параметры в виде пар ключ-значение для вывода."""
-        return [
-            ("package", self.package),
-            ("repo", self.repo),
-            ("test-mode", str(self.test_mode).lower()),
-            ("version", self.version or EMPTY_VALUE),
-            ("output", self.output),
-            ("max-depth", str(self.max_depth)),
-        ]
 
 
 class ArgumentParserWithErrors(argparse.ArgumentParser):
