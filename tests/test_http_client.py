@@ -96,7 +96,7 @@ class LocalRepoTests(unittest.TestCase):
                 "--repo", base]
         code, out, _ = self.run_main(args)
         self.assertEqual(code, EXIT_OK)
-        self.assertIn("org.demo:lib:2.1 (compile)", out)
+        self.assertIn("org.demo:app:1.0 -> org.demo:lib:2.1", out)
 
     def test_end_to_end_wrong_version(self):
         """Несуществующая версия даёт сообщение об ошибке и код 1."""
