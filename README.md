@@ -106,27 +106,52 @@ D
 
 ## 3. Запуск и тесты
 
-Требуется Python 3.9+.
+Требуется Python 3.9+. Приложение запускается как модуль `depviz`; каталог
+`src` должен быть в `PYTHONPATH`.
+
+Windows (PowerShell), из корня проекта:
 
 ```
+$env:PYTHONPATH = "src"
+py -m depviz --package org.apache.httpcomponents:httpclient --version 4.5.14
+```
+
+Linux/macOS:
+
+```
+PYTHONPATH=src python3 -m depviz --package org.apache.httpcomponents:httpclient --version 4.5.14
+```
+
+Те же запуски через скрипты (они сами задают `PYTHONPATH`):
+
+```
+.\run.bat --package org.apache.httpcomponents:httpclient --version 4.5.14
 sh run.sh --package org.apache.httpcomponents:httpclient --version 4.5.14
-run.bat   --package org.apache.httpcomponents:httpclient --version 4.5.14
 ```
 
-Тесты (стандартный `unittest`):
+Первая команда - для PowerShell, вторая - для Linux/macOS.
+
+Тесты (стандартный `unittest`, `PYTHONPATH` не нужен):
 
 ```
+py -m unittest discover -s tests -t . -v
 python3 -m unittest discover -s tests -t . -v
 ```
+
+Первая команда - для Windows, вторая - для Linux/macOS.
 
 В PyCharm каталог `src` нужно пометить как Sources Root.
 
 ## 4. Примеры (тестовый репозиторий, каталог `examples/`)
 
+В примерах первая строка блока - команда (для Windows вместо `python`
+используйте `py`, предварительно выполнив `$env:PYTHONPATH = "src"`),
+остальные строки - вывод.
+
 Ромб - общая зависимость D в графе один раз:
 
 ```
-$ sh run.sh --test-mode --package A --repo examples/diamond.txt
+python -m depviz --test-mode --package A --repo examples/diamond.txt
 Граф зависимостей A (макс. глубина 3):
   A -> B, C
   B -> D
@@ -139,7 +164,7 @@ $ sh run.sh --test-mode --package A --repo examples/diamond.txt
 Цикл:
 
 ```
-$ sh run.sh --test-mode --package A --repo examples/cycle.txt
+python -m depviz --test-mode --package A --repo examples/cycle.txt
 Граф зависимостей A (макс. глубина 3):
   A -> B
   B -> C
@@ -153,7 +178,7 @@ $ sh run.sh --test-mode --package A --repo examples/cycle.txt
 (`--max-depth 5`):
 
 ```
-$ sh run.sh --test-mode --package A --repo examples/complex.txt --max-depth 5
+python -m depviz --test-mode --package A --repo examples/complex.txt --max-depth 5
 Граф зависимостей A (макс. глубина 5):
   A -> B, C
   B -> D, E
@@ -173,7 +198,7 @@ $ sh run.sh --test-mode --package A --repo examples/complex.txt --max-depth 5
 Ограничение глубины (глубина 1 - только прямые зависимости):
 
 ```
-$ sh run.sh --test-mode --package A --repo examples/complex.txt --max-depth 1
+python -m depviz --test-mode --package A --repo examples/complex.txt --max-depth 1
 Граф зависимостей A (макс. глубина 1):
   A -> B, C
   B -> (не раскрыт: достигнута максимальная глубина)
@@ -186,7 +211,7 @@ $ sh run.sh --test-mode --package A --repo examples/complex.txt --max-depth 1
 (D сначала достигнут через A -> B -> C -> D, потом напрямую из A):
 
 ```
-$ sh run.sh --test-mode --package A --repo examples/depth.txt
+python -m depviz --test-mode --package A --repo examples/depth.txt
 Граф зависимостей A (макс. глубина 3):
   A -> B, D
   B -> C
@@ -200,7 +225,7 @@ $ sh run.sh --test-mode --package A --repo examples/depth.txt
 Другой корневой пакет:
 
 ```
-$ sh run.sh --test-mode --package B --repo examples/complex.txt --max-depth 2
+python -m depviz --test-mode --package B --repo examples/complex.txt --max-depth 2
 Граф зависимостей B (макс. глубина 2):
   B -> D, E
   D -> A
@@ -215,17 +240,17 @@ $ sh run.sh --test-mode --package B --repo examples/complex.txt --max-depth 2
 Ошибки тестового режима:
 
 ```
-$ sh run.sh --test-mode --package Z --repo examples/complex.txt
+python -m depviz --test-mode --package Z --repo examples/complex.txt
 Ошибка: пакет Z не описан в тестовом репозитории.
 
-$ sh run.sh --test-mode --package A --repo bad.txt
+python -m depviz --test-mode --package A --repo bad.txt
 Ошибка: строка 2: ожидается формат 'A: B C', получено 'bad line'.
 ```
 
 ## 5. Реальный репозиторий
 
 ```
-sh run.sh --package org.apache.httpcomponents:httpclient --version 4.5.14 --max-depth 2
+python -m depviz --package org.apache.httpcomponents:httpclient --version 4.5.14 --max-depth 2
 ```
 
 Формат вывода тот же: строка `узел -> зависимости` для каждого пакета,
