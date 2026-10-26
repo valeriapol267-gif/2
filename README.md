@@ -151,7 +151,7 @@ python3 -m unittest discover -s tests -t . -v
 Ромб - общая зависимость D в графе один раз:
 
 ```
-python -m depviz --test-mode --package A --repo examples/diamond.txt
+py -m depviz --test-mode --package A --repo examples/diamond.txt
 Граф зависимостей A (макс. глубина 3):
   A -> B, C
   B -> D
@@ -164,7 +164,7 @@ python -m depviz --test-mode --package A --repo examples/diamond.txt
 Цикл:
 
 ```
-python -m depviz --test-mode --package A --repo examples/cycle.txt
+py -m depviz --test-mode --package A --repo examples/cycle.txt
 Граф зависимостей A (макс. глубина 3):
   A -> B
   B -> C
@@ -178,7 +178,7 @@ python -m depviz --test-mode --package A --repo examples/cycle.txt
 (`--max-depth 5`):
 
 ```
-python -m depviz --test-mode --package A --repo examples/complex.txt --max-depth 5
+py -m depviz --test-mode --package A --repo examples/complex.txt --max-depth 5
 Граф зависимостей A (макс. глубина 5):
   A -> B, C
   B -> D, E
@@ -198,7 +198,7 @@ python -m depviz --test-mode --package A --repo examples/complex.txt --max-depth
 Ограничение глубины (глубина 1 - только прямые зависимости):
 
 ```
-python -m depviz --test-mode --package A --repo examples/complex.txt --max-depth 1
+py -m depviz --test-mode --package A --repo examples/complex.txt --max-depth 1
 Граф зависимостей A (макс. глубина 1):
   A -> B, C
   B -> (не раскрыт: достигнута максимальная глубина)
@@ -211,7 +211,7 @@ python -m depviz --test-mode --package A --repo examples/complex.txt --max-depth
 (D сначала достигнут через A -> B -> C -> D, потом напрямую из A):
 
 ```
-python -m depviz --test-mode --package A --repo examples/depth.txt
+py -m depviz --test-mode --package A --repo examples/depth.txt
 Граф зависимостей A (макс. глубина 3):
   A -> B, D
   B -> C
@@ -225,7 +225,7 @@ python -m depviz --test-mode --package A --repo examples/depth.txt
 Другой корневой пакет:
 
 ```
-python -m depviz --test-mode --package B --repo examples/complex.txt --max-depth 2
+py -m depviz --test-mode --package B --repo examples/complex.txt --max-depth 2
 Граф зависимостей B (макс. глубина 2):
   B -> D, E
   D -> A
@@ -240,10 +240,10 @@ python -m depviz --test-mode --package B --repo examples/complex.txt --max-depth
 Ошибки тестового режима:
 
 ```
-python -m depviz --test-mode --package Z --repo examples/complex.txt
+py -m depviz --test-mode --package Z --repo examples/complex.txt
 Ошибка: пакет Z не описан в тестовом репозитории.
 
-python -m depviz --test-mode --package A --repo bad.txt
+py -m depviz --test-mode --package A --repo bad.txt
 Ошибка: строка 2: ожидается формат 'A: B C', получено 'bad line'.
 ```
 
