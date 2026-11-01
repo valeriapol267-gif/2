@@ -1,4 +1,4 @@
-"""Точка входа командной строки (этап 3: граф зависимостей)."""
+"""Точка входа командной строки (этап 4: обратные зависимости)."""
 
 import sys
 from typing import Optional, Sequence, Tuple
@@ -21,6 +21,8 @@ def create_source(config: Config) -> Tuple[DependencySource, str]:
     """Создать источник данных и имя корневого узла по параметрам."""
     if config.test_mode:
         repository = load_graph_file(config.repo)
+        if config.reverse:
+            repository = repository.reversed_repository()
         repository.require(config.package)
         return repository, config.package
     if config.version is None:
@@ -30,10 +32,10 @@ def create_source(config: Config) -> Tuple[DependencySource, str]:
 
 
 def run(config: Config) -> None:
-    """Построить граф зависимостей и вывести его на экран."""
+    """Построить граф (прямой или обратный) и вывести его на экран."""
     source, root = create_source(config)
     graph = build_graph(source, root, config.max_depth)
-    for line in format_graph(graph, config.max_depth):
+    for line in format_graph(graph, config.max_depth, config.reverse):
         print(line)
     for line in format_warnings(graph):
         print(line, file=sys.stderr)
