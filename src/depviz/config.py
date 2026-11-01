@@ -34,7 +34,7 @@ class Config:
     version: Optional[str]
     output: str
     max_depth: int
-
+    reverse: bool
 
 
 class ArgumentParserWithErrors(argparse.ArgumentParser):
@@ -45,13 +45,8 @@ class ArgumentParserWithErrors(argparse.ArgumentParser):
         raise ConfigError(message)
 
 
-def build_parser() -> argparse.ArgumentParser:
-    """Создать парсер опций командной строки."""
-    parser = ArgumentParserWithErrors(
-        prog=PROGRAM_NAME,
-        allow_abbrev=False,
-        description="Визуализация графа зависимостей Maven-пакета.",
-    )
+def add_target_options(parser: argparse.ArgumentParser) -> None:
+    """Добавить опции, определяющие анализируемый пакет и репозиторий."""
     parser.add_argument(
         "--package",
         help="имя пакета: groupId:artifactId (в тестовом режиме: A, B, ...)",
@@ -70,6 +65,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--version",
         help="версия пакета (обязательна вне тестового режима)",
     )
+
+
+def add_analysis_options(parser: argparse.ArgumentParser) -> None:
+    """Добавить опции вывода и параметров анализа."""
     parser.add_argument(
         "--output",
         default=DEFAULT_OUTPUT,
@@ -83,6 +82,22 @@ def build_parser() -> argparse.ArgumentParser:
         f"(от {MIN_DEPTH} до {MAX_DEPTH_LIMIT}, "
         f"по умолчанию {DEFAULT_MAX_DEPTH})",
     )
+    parser.add_argument(
+        "--reverse",
+        action="store_true",
+        help="показать обратные зависимости (только с --test-mode)",
+    )
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Создать парсер опций командной строки."""
+    parser = ArgumentParserWithErrors(
+        prog=PROGRAM_NAME,
+        allow_abbrev=False,
+        description="Визуализация графа зависимостей Maven-пакета.",
+    )
+    add_target_options(parser)
+    add_analysis_options(parser)
     return parser
 
 
@@ -191,6 +206,20 @@ def validate_depth(raw_depth: str) -> int:
     return depth
 
 
+def validate_reverse(reverse: bool, test_mode: bool) -> bool:
+    """Проверить, что режим обратных зависимостей доступен.
+
+    В реальных Maven-репозиториях нет индекса обратных зависимостей,
+    поэтому режим работает только с файлом тестового репозитория.
+    """
+    if reverse and not test_mode:
+        raise ConfigError(
+            "режим --reverse поддерживается только вместе с --test-mode: "
+            "у Maven-репозитория нет индекса обратных зависимостей."
+        )
+    return reverse
+
+
 def parse_config(argv: Optional[Sequence[str]] = None) -> Config:
     """Разобрать аргументы командной строки и проверить все параметры."""
     args = build_parser().parse_args(argv)
@@ -201,4 +230,5 @@ def parse_config(argv: Optional[Sequence[str]] = None) -> Config:
         version=validate_version(args.version, args.test_mode),
         output=validate_output(args.output),
         max_depth=validate_depth(args.max_depth),
+        reverse=validate_reverse(args.reverse, args.test_mode),
     )
