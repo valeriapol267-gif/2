@@ -74,6 +74,20 @@ class GraphFileRepository:
         """Вернуть прямые зависимости пакета (пустой список, если нет)."""
         return list(self.packages.get(node, []))
 
+    def reversed_repository(self) -> "GraphFileRepository":
+        """Построить репозиторий обратных зависимостей.
+
+        В нём «зависимостями» пакета считаются пакеты, которые зависят
+        от него. Известны все пакеты файла, включая упомянутые только
+        как зависимости.
+        """
+        dependents: Dict[str, List[str]] = {}
+        for name, dependencies in self.packages.items():
+            dependents.setdefault(name, [])
+            for dependency in dependencies:
+                dependents.setdefault(dependency, []).append(name)
+        return GraphFileRepository(dependents)
+        
 
 def load_graph_file(path: str) -> GraphFileRepository:
     """Прочитать тестовый репозиторий из файла."""
