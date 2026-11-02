@@ -396,8 +396,14 @@ n6 --> n4
 
 ```
 python -m depviz --package org.apache.httpcomponents:httpclient --version 4.5.14 --max-depth 2 --output httpclient.png
+<img width="933" height="549" alt="image" src="https://github.com/user-attachments/assets/e2a8a6e9-7c75-4854-8618-c5e8f49a3cb5" />
+
 python -m depviz --package com.google.guava:guava --version 32.1.3-jre --max-depth 2 --output guava.png
+<img width="635" height="549" alt="image" src="https://github.com/user-attachments/assets/082e3376-acd3-4b76-92b2-d27fe8db6b89" />
+
 python -m depviz --package org.apache.commons:commons-text --version 1.10.0 --max-depth 2 --output text.png
+<img width="1406" height="892" alt="image" src="https://github.com/user-attachments/assets/7267b864-4737-49bd-bcdc-fc46af7a5603" />
+
 ```
 
 Ошибки визуализации:
