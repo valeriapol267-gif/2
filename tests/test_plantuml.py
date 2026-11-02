@@ -1,5 +1,6 @@
 """Тесты генерации и кодирования PlantUML."""
 
+import base64
 import unittest
 import zlib
 
@@ -23,15 +24,12 @@ def puml_for(packages, root="A", depth=5, reverse=False, broken=()):
 
 def decode_plantuml(encoded):
     """Раскодировать строку PlantUML обратно в текст (для проверки)."""
-    values = [ENCODING_ALPHABET.index(char) for char in encoded]
-    data = bytearray()
-    for start in range(0, len(values), 4):
-        first, second, third, fourth = values[start:start + 4]
-        data.append((first << 2) | (second >> 4))
-        data.append(((second & 0x0F) << 4) | (third >> 2))
-        data.append(((third & 0x03) << 6) | fourth)
-    unpacker = zlib.decompressobj(-zlib.MAX_WBITS)
-    return unpacker.decompress(bytes(data)).decode("utf-8")
+    translation = str.maketrans(
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_",
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
+    )
+    data = base64.b64decode(encoded.translate(translation), validate=True)
+    return zlib.decompress(data, -zlib.MAX_WBITS).decode("utf-8")
 
 
 class BuildTests(unittest.TestCase):
@@ -91,15 +89,23 @@ class EncodeTests(unittest.TestCase):
     """Проверки кодирования для сервера PlantUML."""
 
     def test_known_vectors(self):
-        """Результат совпадает с примерами из документации PlantUML."""
-        self.assertEqual(
-            encode_plantuml("Bob -> Alice : hello"),
-            "SyfFKj2rKt3CoKnELR1Io4ZDoSa70000",
+        """Известные варианты Deflate восстанавливают тот же исходный текст."""
+        vectors = (
+            ("Bob -> Alice : hello", "SyfFKj2rKt3CoKnELR1Io4ZDoSa70000"),
+            (
+                "@startuml\nBob -> Alice : hello\n@enduml",
+                "SoWkIImgAStDuNBAJrBGjLDmpCbCJbMmKiX8pSd9vt98pKi1IW80",
+            ),
+            (
+                "@startuml\nBob -> Alice : hello\n@enduml",
+                "SoWkIImgAStDuNBAJrBGjLDmpCbCJbMmKiX8pSd9vt98pKifpSq10000",
+            ),
         )
-        self.assertEqual(
-            encode_plantuml("@startuml\nBob -> Alice : hello\n@enduml"),
-            "SoWkIImgAStDuNBAJrBGjLDmpCbCJbMmKiX8pSd9vt98pKi1IW80",
-        )
+
+        for text, encoded in vectors:
+            with self.subTest(encoded=encoded):
+                self.assertEqual(decode_plantuml(encoded), text)
+                self.assertEqual(decode_plantuml(encode_plantuml(text)), text)
 
     def test_round_trip(self):
         """Закодированный текст (включая кириллицу) восстанавливается."""
