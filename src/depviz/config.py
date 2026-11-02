@@ -12,11 +12,12 @@ from depviz.errors import ConfigError
 
 PROGRAM_NAME = "depviz"
 DEFAULT_REPO_URL = "https://repo1.maven.org/maven2"
-DEFAULT_OUTPUT = "graph.png"
+DEFAULT_PLANTUML_SERVER = "https://www.plantuml.com/plantuml"
 DEFAULT_MAX_DEPTH = 3
 MIN_DEPTH = 1
 MAX_DEPTH_LIMIT = 100
 OUTPUT_EXTENSION = ".png"
+JAR_EXTENSION = ".jar"
 ALLOWED_SCHEMES = ("http", "https")
 MAVEN_NAME_RE = re.compile(r"[A-Za-z0-9_.\-]+:[A-Za-z0-9_.\-]+")
 TEST_NAME_RE = re.compile(r"[A-Z]+")
@@ -32,9 +33,11 @@ class Config:
     repo: str
     test_mode: bool
     version: Optional[str]
-    output: str
+    output: Optional[str]
     max_depth: int
     reverse: bool
+    plantuml_jar: Optional[str]
+    plantuml_server: str
 
 
 class ArgumentParserWithErrors(argparse.ArgumentParser):
@@ -71,9 +74,8 @@ def add_analysis_options(parser: argparse.ArgumentParser) -> None:
     """Добавить опции вывода и параметров анализа."""
     parser.add_argument(
         "--output",
-        default=DEFAULT_OUTPUT,
-        help=f"имя файла с изображением графа (по умолчанию "
-        f"{DEFAULT_OUTPUT})",
+        help="имя PNG-файла с изображением графа; если не задано, "
+        "изображение не создаётся",
     )
     parser.add_argument(
         "--max-depth",
@@ -89,6 +91,21 @@ def add_analysis_options(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_render_options(parser: argparse.ArgumentParser) -> None:
+    """Добавить опции получения PNG-изображения из текста PlantUML."""
+    parser.add_argument(
+        "--plantuml-jar",
+        help="путь к plantuml.jar для локальной отрисовки (нужны Java и "
+        "Graphviz); без него используется сервер PlantUML",
+    )
+    parser.add_argument(
+        "--plantuml-server",
+        default=DEFAULT_PLANTUML_SERVER,
+        help=f"адрес сервера PlantUML (по умолчанию "
+        f"{DEFAULT_PLANTUML_SERVER})",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Создать парсер опций командной строки."""
     parser = ArgumentParserWithErrors(
@@ -98,6 +115,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_target_options(parser)
     add_analysis_options(parser)
+    add_render_options(parser)
     return parser
 
 
@@ -132,19 +150,18 @@ def check_test_repo_path(repo: str) -> str:
     return repo
 
 
-def check_repo_url(repo: str) -> str:
-    """Проверить URL репозитория и убрать завершающие символы «/»."""
+def check_url(url: str, label: str) -> str:
+    """Проверить URL и убрать завершающие символы «/»."""
     try:
-        parsed = urlparse(repo)
+        parsed = urlparse(url)
     except ValueError:
-        raise ConfigError(f"некорректный URL репозитория: {repo!r}.") from None
-    has_space = any(char.isspace() for char in repo)
+        raise ConfigError(f"некорректный URL {label}: {url!r}.") from None
+    has_space = any(char.isspace() for char in url)
     if parsed.scheme not in ALLOWED_SCHEMES or not parsed.hostname or has_space:
         raise ConfigError(
-            "URL репозитория должен иметь вид http(s)://хост/путь: "
-            f"{repo!r}."
+            f"URL {label} должен иметь вид http(s)://хост/путь: {url!r}."
         )
-    return repo.rstrip("/")
+    return url.rstrip("/")
 
 
 def validate_repo(repo: Optional[str], test_mode: bool) -> str:
@@ -155,7 +172,8 @@ def validate_repo(repo: Optional[str], test_mode: bool) -> str:
                 "в тестовом режиме нужно указать путь к файлу (--repo)."
             )
         return check_test_repo_path(repo)
-    return check_repo_url(DEFAULT_REPO_URL if repo is None else repo)
+    url = DEFAULT_REPO_URL if repo is None else repo
+    return check_url(url, "репозитория")
 
 
 def validate_version(version: Optional[str], test_mode: bool) -> Optional[str]:
@@ -169,8 +187,10 @@ def validate_version(version: Optional[str], test_mode: bool) -> Optional[str]:
     return version
 
 
-def validate_output(output: str) -> str:
-    """Проверить имя файла изображения графа."""
+def validate_output(output: Optional[str]) -> Optional[str]:
+    """Проверить имя файла изображения графа (None - без изображения)."""
+    if output is None:
+        return None
     path = Path(output)
     name = path.name
     if not name or path.suffix.lower() != OUTPUT_EXTENSION:
@@ -206,6 +226,19 @@ def validate_depth(raw_depth: str) -> int:
     return depth
 
 
+def validate_jar(jar: Optional[str]) -> Optional[str]:
+    """Проверить путь к plantuml.jar (необязательный параметр)."""
+    if jar is None:
+        return None
+    path = Path(jar)
+    if path.suffix.lower() != JAR_EXTENSION or not path.is_file():
+        raise ConfigError(
+            f"файл plantuml.jar не найден или не имеет расширения "
+            f"{JAR_EXTENSION}: {jar!r}."
+        )
+    return jar
+
+
 def validate_reverse(reverse: bool, test_mode: bool) -> bool:
     """Проверить, что режим обратных зависимостей доступен.
 
@@ -231,4 +264,6 @@ def parse_config(argv: Optional[Sequence[str]] = None) -> Config:
         output=validate_output(args.output),
         max_depth=validate_depth(args.max_depth),
         reverse=validate_reverse(args.reverse, args.test_mode),
+        plantuml_jar=validate_jar(args.plantuml_jar),
+        plantuml_server=check_url(args.plantuml_server, "сервера PlantUML"),
     )
