@@ -30,7 +30,9 @@ def fetch_bytes(url: str) -> bytes:
         ) as response:
             data = response.read(MAX_RESPONSE_BYTES + 1)
     except urllib.error.HTTPError as error:
-        raise FetchError(describe_http_error(error, url)) from error
+        message = describe_http_error(error, url)
+        error.close()
+        raise FetchError(message) from error
     except urllib.error.URLError as error:
         raise FetchError(
             f"не удалось подключиться к {url}: {error.reason}."
