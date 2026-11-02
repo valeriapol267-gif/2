@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from depviz.config import DEFAULT_OUTPUT, DEFAULT_REPO_URL, parse_config
+from depviz.config import DEFAULT_REPO_URL, parse_config
 from depviz.errors import ConfigError
 
 PACKAGE = "org.apache.commons:commons-lang3"
@@ -19,7 +19,7 @@ class RemoteModeTests(unittest.TestCase):
         config = parse_config(BASE_ARGS)
         self.assertEqual(config.package, PACKAGE)
         self.assertEqual(config.repo, DEFAULT_REPO_URL)
-        self.assertEqual(config.output, DEFAULT_OUTPUT)
+        self.assertIsNone(config.output)
         self.assertFalse(config.test_mode)
 
     def test_all_options(self):
