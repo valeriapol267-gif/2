@@ -20,6 +20,8 @@ dist/
 .DS_Store
 
 graph.png
+*.png
+graph.puml
 *.zip
 *.tar
 *.tar.gz
